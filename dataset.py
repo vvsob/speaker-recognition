@@ -54,7 +54,7 @@ class DatasetWrapper:
         sampling_rate = item["sampling_rate"]
         if random.random() < self.p_noise:
             resulting_noise_intensity = (self.noise_intensity * array.abs().max() * random.random())
-            noise = torch.randn_like() * resulting_noise_intensity
+            noise = torch.randn_like(array) * resulting_noise_intensity
             array = array + noise
         if random.random() < self.p_smooth:
             array = F.conv1d(array, self.smoothness_kernel, padding=self.smoothness_padding).squeeze().unsqueeze(0)
@@ -62,7 +62,7 @@ class DatasetWrapper:
             new_sampling_rate = random.choice(self.random_sampling_rates)
             array = FF.resample(array, sampling_rate, new_sampling_rate)
             sampling_rate = new_sampling_rate
-        item["array"] = FF.resample(array, sampling_rate, self.sampling_rate)
+        item["array"] = FF.resample(array, sampling_rate, self.sampling_rate)[:1]
         item["sampling_rate"] = self.sampling_rate
         return item
 
