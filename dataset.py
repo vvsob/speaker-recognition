@@ -1,22 +1,25 @@
-from datetime import datetime
-
-from datasets import Dataset, load_dataset
+from datasets import Dataset
 import random
-import torch, torchaudio
+import torch
 import torch.nn.functional as F
 import torchaudio.functional as FF
 
-from tqdm import tqdm
-
-
 class DatasetWrapper:
-    def __init__(self, data, sampling_rate=16000, name=None, p_noise=0.0, p_smooth=0.0, p_resample=0.0, max_noise_intensity=0.02, smoothness_factor=20, min_resample=2000, max_resample=8000 ):
+    def __init__(self, data, sampling_rate=16000, name=None, p_noise=0.0, p_smooth=0.0, p_resample=0.0, max_noise_intensity=0.02, smoothness_factor=40, min_resample=4000, max_resample=8000 ):
         """
-        Initializes the HuggingFaceDatasetWrapper.  Assumes input is always a Dataset.
+        Initializes the DatasetWrapper.  Assumes input is always a Dataset.
 
         Args:
             data: The Hugging Face Dataset object.
-            name (str, optional): A name for the dataset. Defaults to None.
+            sampling_rate: The target sampling rate of the audio.
+            name: The name of the dataset.
+            p_noise: The probability of noise.
+            p_smooth: The probability of smoothing.
+            p_resample: The probability of resampling.
+            max_noise_intensity: The maximum intensity of the noise.
+            smoothness_factor: The smoothness factor.
+            min_resample: The minimum resample rate.
+            max_resample: The maximum resample rate.
         """
 
         if not isinstance(data, Dataset):
@@ -47,17 +50,19 @@ class DatasetWrapper:
         return len(self.dataset)
 
     def augmentate(self, item):
+        array = item["array"]
+        sampling_rate = item["sampling_rate"]
         if random.random() < self.p_noise:
-            resulting_noise_intensity = (self.noise_intensity * item["array"].abs().max() * random.random())
-            noise = torch.randn_like(item["array"]) * resulting_noise_intensity
-            item["array"] = item["array"] + noise
+            resulting_noise_intensity = (self.noise_intensity * array.abs().max() * random.random())
+            noise = torch.randn_like() * resulting_noise_intensity
+            array = array + noise
         if random.random() < self.p_smooth:
-            item["array"] = F.conv1d(item["array"], self.smoothness_kernel, padding=self.smoothness_padding).squeeze().unsqueeze(0)
+            array = F.conv1d(array, self.smoothness_kernel, padding=self.smoothness_padding).squeeze().unsqueeze(0)
         if random.random() < self.p_resample:
             new_sampling_rate = random.choice(self.random_sampling_rates)
-            item["array"] = FF.resample(item["array"], item["sampling_rate"], new_sampling_rate)
-            item["sampling_rate"] = new_sampling_rate
-        item["array"] = FF.resample(item["array"], item["sampling_rate"], self.sampling_rate)
+            array = FF.resample(array, sampling_rate, new_sampling_rate)
+            sampling_rate = new_sampling_rate
+        item["array"] = FF.resample(array, sampling_rate, self.sampling_rate)
         item["sampling_rate"] = self.sampling_rate
         return item
 
@@ -65,27 +70,12 @@ class DatasetWrapper:
         raw_item = self.dataset[idx]
         item = {"array": torch.FloatTensor(raw_item["audio"]["array"]).unsqueeze(0), "sampling_rate": raw_item["audio"]["sampling_rate"],
                 "speaker_id": raw_item["client_id"]}
-        return self.augmentate(item)  # Apply augmentation
+        return self.augmentate(item)
 
     def save_to_disk(self, path, *args, **kwargs):
         return self.dataset.save_to_disk(path, *args, **kwargs)
 
     @classmethod
-    def from_disk(cls, path, *args, **kwargs):
-        dataset = Dataset.from_disk(path, *args, **kwargs)
+    def load_from_disk(cls, path, *args, **kwargs):
+        dataset = Dataset.load_from_disk(path, *args, **kwargs)
         return cls(dataset)
-
-
-def main():
-    cv_11 = load_dataset("mozilla-foundation/common_voice_11_0", "ru", split="train[:100]", data_dir="dataset")
-    ds = DatasetWrapper(cv_11, p_noise=0.0, p_smooth=0.0, p_resample=0.0, max_noise_intensity=0.02, smoothness_factor=20, min_resample=2000, max_resample=4000)
-
-    # t = datetime.now()
-    # for i in tqdm(range(10000)):
-    #     ds[random.randint(0, len(cv_11)-1)]
-    # t2 = datetime.now()
-    # print(t2 - t)
-    torchaudio.save(f"ideal.wav", ds[0]["array"], ds[0]["sampling_rate"])
-
-if __name__ == "__main__":
-    main()
