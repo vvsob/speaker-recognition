@@ -6,8 +6,8 @@ from dataset import DatasetWrapper
 from datetime import datetime
 from tqdm import tqdm
 import random
-from tqdm import tqdm
 from dataset import DatasetWrapper
+import datasets
 
 from model.model import *
 from model.trainer import *
@@ -15,6 +15,26 @@ from model.trainer import *
 from torcheval.metrics import MulticlassAccuracy
 
 cv_11 = load_dataset("mozilla-foundation/common_voice_11_0", "ru", split="train[:1000]", data_dir="dataset")
+
+ds = []
+
+for i in tqdm(range(len(cv_11))):
+    waveform = cv_11[i]['audio']['array']
+    sample_rate = cv_11[i]['audio']['sampling_rate']
+
+    step = sample_rate * 5
+
+    total_max = waveform.max()
+
+    for start in range(0, waveform.shape[0], step):
+        frag = waveform[start : start+step]
+
+        if frag.max() / total_max > 0.4:
+            ds.append(cv_11[i])
+            ds[-1]['audio']['array'] = frag
+            del ds[-1]['path']
+
+cv_11 = datasets.Dataset.from_list(ds)
 
 users_records = dict()
 
