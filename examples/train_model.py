@@ -10,78 +10,68 @@ from tqdm import tqdm
 import random
 from dataset import DatasetWrapper
 import datasets
+import sys
 
 from model.model import *
 from model.trainer import *
 
-from torcheval.metrics import MulticlassAccuracy
+from torcheval.metrics import MulticlassAccuracy, MulticlassF1Score
 
 import numpy as np
 
-cnt_users = 5
+cnt_users = 6
+
+names_to_id = {
+    "slava": 0,
+    "misha": 1,
+    "oleg": 2,
+    "bogdan": 3,
+    "dima": 4,
+    "artem": 5,
+    "lesha": 5,
+    "nastya": 5
+}
 
 if not os.path.exists("dataset"):
-    cv_11 = load_dataset("mozilla-foundation/common_voice_11_0", "ru", split="train[:1000]", data_dir="dataset")
+    ds_list = []
 
-    ds = []
+    for user_name, client_id in names_to_id.items():
+        print(f"Processing {user_name}")
 
-    for i in tqdm(range(len(cv_11))):
-        waveform = cv_11[i]['audio']['array']
-        sample_rate = cv_11[i]['audio']['sampling_rate']
+        dirname = f"voices/{user_name}"
+        for file in os.listdir(f"voices/{user_name}"):
+            print(f"-> {file}")
 
-        step = sample_rate * 5
+            waveform, sample_rate = torchaudio.load(f"{dirname}/{file}")
+            waveform = waveform[0]
 
-        total_max = np.abs(waveform).max()
+            step = 5 * sample_rate
 
-        for start in range(0, waveform.shape[0], step):
-            frag = waveform[start:start+step]
+            wf_max = waveform.max()
 
-            if np.abs(frag).max() / total_max > 0.4:
-                ds.append(cv_11[i])
-                ds[-1]['audio']['array'] = frag
-                del ds[-1]['path']
+            for start in range(0, waveform.shape[0], step):
+                frag = waveform[start:start+step]
 
-    cv_11 = datasets.Dataset.from_list(ds)
+                if frag.max() / wf_max > 0.4:
+                    ds_list.append({
+                        'audio': {
+                            'array': frag,
+                            'sampling_rate': sample_rate
+                        },
+                        'client_id': client_id
+                    })
 
-    users_records = dict()
-
-    for i in tqdm(range(len(cv_11))):
-        if cv_11[i]['client_id'] not in users_records.keys():
-            users_records[cv_11[i]['client_id']] = 0
-
-        users_records[cv_11[i]['client_id']] += 1
-
-    pairs = []
-
-    for key, value in users_records.items():
-        pairs.append((key, value))
-
-    pairs.sort(key=lambda x: -x[1])
-
-    print(pairs[:cnt_users])
-
-    hash_to_id = dict()
-    for i in range(cnt_users):
-        hash_to_id[pairs[i][0]] = i
-
-    cv_11 = cv_11.filter(lambda x: x['client_id'] in hash_to_id.keys())
-
-
-    def update_ids(row):
-        row['client_id'] = hash_to_id[row['client_id']]
-        return row
-
-
-    cv_11 = cv_11.map(update_ids)
-    cv_11.save_to_disk("dataset")
+    ds = datasets.Dataset.from_list(ds_list)
+    ds.save_to_disk("dataset")
 else:
-    cv_11 = datasets.load_from_disk("dataset")
+    ds = datasets.load_from_disk("dataset")
 
-split_dataset = cv_11.train_test_split(
+split_dataset = ds.train_test_split(
     test_size=0.2,
     shuffle=True,
     seed=52
 )
+
 
 train_ds = DatasetWrapper(split_dataset['train'], p_noise=0.3, p_smooth=0.3, p_resample=0.3, max_noise_intensity=0.02,
                     smoothness_factor=40, min_resample=4000, max_resample=8000)
@@ -92,4 +82,4 @@ test_ds = DatasetWrapper(split_dataset['test'], p_noise=0, p_smooth=0, p_resampl
 model = VoicePredictor(cnt_users)
 
 trainer = Trainer(model, train_ds, test_ds, 4)
-trainer.fit('Adam', nn.CrossEntropyLoss(), metrics=[MulticlassAccuracy()])
+trainer.fit('Adam', nn.CrossEntropyLoss(), metrics=[MulticlassAccuracy(), MulticlassF1Score()], checkpoint_metric=MulticlassF1Score())
