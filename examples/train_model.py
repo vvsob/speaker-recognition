@@ -1,3 +1,5 @@
+import os.path
+
 from datasets import load_dataset
 import torchaudio
 import torch
@@ -16,60 +18,64 @@ from torcheval.metrics import MulticlassAccuracy
 
 import numpy as np
 
-cv_11 = load_dataset("mozilla-foundation/common_voice_11_0", "ru", split="train[:1000]", data_dir="dataset")
+cnt_users = 2
 
-ds = []
+if not os.path.exists("dataset"):
+    cv_11 = load_dataset("mozilla-foundation/common_voice_11_0", "ru", split="train[:1000]", data_dir="dataset")
 
-for i in tqdm(range(len(cv_11))):
-    waveform = cv_11[i]['audio']['array']
-    sample_rate = cv_11[i]['audio']['sampling_rate']
+    ds = []
 
-    step = sample_rate * 5
+    for i in tqdm(range(len(cv_11))):
+        waveform = cv_11[i]['audio']['array']
+        sample_rate = cv_11[i]['audio']['sampling_rate']
 
-    total_max = np.abs(waveform).max()
+        step = sample_rate * 5
 
-    for start in range(0, waveform.shape[0], step):
-        frag = waveform[start:start+step]
+        total_max = np.abs(waveform).max()
 
-        if np.abs(frag).max() / total_max > 0.4:
-            ds.append(cv_11[i])
-            ds[-1]['audio']['array'] = frag
-            del ds[-1]['path']
+        for start in range(0, waveform.shape[0], step):
+            frag = waveform[start:start+step]
 
-cv_11 = datasets.Dataset.from_list(ds)
+            if np.abs(frag).max() / total_max > 0.4:
+                ds.append(cv_11[i])
+                ds[-1]['audio']['array'] = frag
+                del ds[-1]['path']
 
-users_records = dict()
+    cv_11 = datasets.Dataset.from_list(ds)
 
-for i in tqdm(range(len(cv_11))):
-    if cv_11[i]['client_id'] not in users_records.keys():
-        users_records[cv_11[i]['client_id']] = 0
+    users_records = dict()
 
-    users_records[cv_11[i]['client_id']] += 1
+    for i in tqdm(range(len(cv_11))):
+        if cv_11[i]['client_id'] not in users_records.keys():
+            users_records[cv_11[i]['client_id']] = 0
 
-pairs = []
+        users_records[cv_11[i]['client_id']] += 1
 
-for key, value in users_records.items():
-    pairs.append((key, value))
+    pairs = []
 
-pairs.sort(key=lambda x: -x[1])
+    for key, value in users_records.items():
+        pairs.append((key, value))
 
-cnt_users = min(2, len(pairs))
+    pairs.sort(key=lambda x: -x[1])
 
-print(pairs[:cnt_users])
+    print(pairs[:cnt_users])
 
-hash_to_id = dict()
-for i in range(cnt_users):
-    hash_to_id[pairs[i][0]] = i
+    hash_to_id = dict()
+    for i in range(cnt_users):
+        hash_to_id[pairs[i][0]] = i
 
-cv_11 = cv_11.filter(lambda x: x['client_id'] in hash_to_id.keys())
-
-
-def update_ids(row):
-    row['client_id'] = hash_to_id[row['client_id']]
-    return row
+    cv_11 = cv_11.filter(lambda x: x['client_id'] in hash_to_id.keys())
 
 
-cv_11 = cv_11.map(update_ids)
+    def update_ids(row):
+        row['client_id'] = hash_to_id[row['client_id']]
+        return row
+
+
+    cv_11 = cv_11.map(update_ids)
+    cv_11.save_to_disk("dataset")
+else:
+    cv_11 = datasets.load_from_disk("dataset")
 
 split_dataset = cv_11.train_test_split(
     test_size=0.2,
