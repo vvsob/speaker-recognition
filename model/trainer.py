@@ -1,3 +1,6 @@
+import json
+import os
+
 from torch.utils.data import DataLoader, Dataset
 from torch.nn.utils.rnn import pad_sequence
 import torch
@@ -70,7 +73,13 @@ def collate_fn(batch):
 
 
 class Trainer:
-    def __init__(self, model: nn.Module, train_ds, test_ds, batch_size, device=None):
+    def __init__(self, model: nn.Module, train_ds, test_ds, batch_size, device=None, output_dir="training"):
+        os.makedirs(f"{output_dir}", exist_ok=True)
+        os.makedirs(f"{output_dir}/checkpoints", exist_ok=True)
+        os.makedirs(f"{output_dir}/plots", exist_ok=True)
+
+        self.output_dir = output_dir
+
         self.train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
         self.test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 
@@ -94,7 +103,8 @@ class Trainer:
         print("Total params:", sum(p.numel() for p in self.model.parameters()))
         print("Trainable params:", sum(p.numel() for p in self.model.parameters() if p.requires_grad))
 
-    def fit(self, optimizer, loss, num_epochs=10, lr=0.001, metrics: list = None, schedulers: list = None):
+    def fit(self, optimizer, loss, num_epochs=10, lr=0.001, metrics: list = None, checkpoint_metric=None, schedulers: list = None):
+        checkpoint_metric = checkpoint_metric.__class__.__name__
         train_metrics_history: list[dict] = []
         test_metrics_history: list[dict] = []
 
@@ -142,7 +152,7 @@ class Trainer:
             # calculate train metrics and loss
             train_metrics = {}
             for metric in metrics:
-                train_metrics[metric.__class__.__name__] = metric.compute()
+                train_metrics[metric.__class__.__name__] = float(metric.compute())
                 metric.reset()
 
             train_metrics["Loss"] = loss_train / total_train
@@ -175,7 +185,7 @@ class Trainer:
             # calculate test metrics and loss
             test_metrics = {}
             for metric in metrics:
-                test_metrics[metric.__class__.__name__] = metric.compute()
+                test_metrics[metric.__class__.__name__] = float(metric.compute())
                 metric.reset()
 
             test_metrics["Loss"] = loss_test / total_test
@@ -188,6 +198,17 @@ class Trainer:
 
             for metric, value in test_metrics.items():
                 print(f"[TEST] {metric} = {value}")
+
+            mx_metric = 0
+            for i in range(len(test_metrics_history) - 1):
+                mx_metric = max(mx_metric, test_metrics_history[i][checkpoint_metric])
+
+            if test_metrics[checkpoint_metric] > mx_metric:
+                torch.save({
+                    'model_state_dict': self.model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()
+                }, f"{self.output_dir}/checkpoints/checkpoint_{epoch + 1}.pth")
+                print(f"Saved to {self.output_dir}/checkpoints/checkpoint_{epoch + 1}.pth")
 
             fig, ax = plt.subplots((len(train_metrics.keys()) + 1) // 2, 2, figsize=(10, 3 * (len(train_metrics.keys()) + 1) // 2))
             ax = ax.flatten()
@@ -204,5 +225,14 @@ class Trainer:
                 ax[i].set_ylabel(key)
                 ax[i].set_title(key)
                 ax[i].legend()
+                ax[i].grid()
 
-            plt.show()
+            plt.subplots_adjust(hspace=0.5)
+            plt.savefig(f"{self.output_dir}/plots/{epoch + 1}.jpg")
+
+            with open(f"{self.output_dir}/train_history.json", 'w') as f:
+                print(train_metrics_history)
+                json.dump(train_metrics_history, f)
+
+            with open(f"{self.output_dir}/test_history.json", 'w') as f:
+                json.dump(test_metrics_history, f)
