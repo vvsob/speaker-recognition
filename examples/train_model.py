@@ -14,6 +14,8 @@ from model.trainer import *
 
 from torcheval.metrics import MulticlassAccuracy
 
+import numpy as np
+
 cv_11 = load_dataset("mozilla-foundation/common_voice_11_0", "ru", split="train[:1000]", data_dir="dataset")
 
 ds = []
@@ -24,12 +26,12 @@ for i in tqdm(range(len(cv_11))):
 
     step = sample_rate * 5
 
-    total_max = waveform.max()
+    total_max = np.abs(waveform).max()
 
     for start in range(0, waveform.shape[0], step):
-        frag = waveform[start : start+step]
+        frag = waveform[start:start+step]
 
-        if frag.max() / total_max > 0.4:
+        if np.abs(frag).max() / total_max > 0.4:
             ds.append(cv_11[i])
             ds[-1]['audio']['array'] = frag
             del ds[-1]['path']
@@ -51,7 +53,9 @@ for key, value in users_records.items():
 
 pairs.sort(key=lambda x: -x[1])
 
-cnt_users = min(5, len(pairs))
+cnt_users = min(2, len(pairs))
+
+print(pairs[:cnt_users])
 
 hash_to_id = dict()
 for i in range(cnt_users):
@@ -73,7 +77,7 @@ split_dataset = cv_11.train_test_split(
     seed=52
 )
 
-train_ds = DatasetWrapper(split_dataset['train'], p_noise=0.1, p_smooth=0.1, p_resample=0.1, max_noise_intensity=0.02,
+train_ds = DatasetWrapper(split_dataset['train'], p_noise=0, p_smooth=0, p_resample=0, max_noise_intensity=0.02,
                     smoothness_factor=40, min_resample=4000, max_resample=8000)
 
 test_ds = DatasetWrapper(split_dataset['test'], p_noise=0, p_smooth=0, p_resample=0, max_noise_intensity=0,

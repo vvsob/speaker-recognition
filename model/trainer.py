@@ -141,7 +141,11 @@ class Trainer:
             total_test = 0
 
             with torch.no_grad():
-                for inputs, labels in self.test_loader:
+                for data in tqdm(self.test_loader):
+                    inputs = data['array']
+                    labels = data['speaker_id']
+
+                    inputs = extract_features(list(inputs))
                     inputs, labels = inputs.to(self.device), labels.to(self.device)
                     outputs = self.model(inputs)
 
