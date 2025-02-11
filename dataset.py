@@ -22,8 +22,18 @@ class DatasetWrapper:
             max_resample: The maximum resample rate.
         """
 
-        if not isinstance(data, Dataset):
-            raise TypeError("Data must be a Hugging Face Dataset object.")
+        if isinstance(data, list):
+            # Convert list of dictionaries to Hugging Face Dataset
+            dataset_dict = {
+                "audio": [{"array": item["audio"]["array"], "sampling_rate": item["audio"]["sampling_rate"]} for item in
+                          data],
+                "client_id": [item.get("client_id", None) for item in data]  # Handles missing client_id
+            }
+            self.dataset = Dataset.from_dict(dataset_dict)
+        elif isinstance(data, Dataset):
+            self.dataset = data
+        else:
+            raise TypeError("Data must be a Hugging Face Dataset object or a list of dictionaries.")
 
         self.dataset = data
         self.sampling_rate = sampling_rate
