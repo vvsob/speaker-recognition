@@ -5,6 +5,7 @@ from torch import nn, optim
 from tqdm import tqdm
 from transformers import Wav2Vec2FeatureExtractor
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
 
 
 def extract_features(waveforms):
@@ -85,6 +86,9 @@ class Trainer:
         self.model = model.to(device)
 
     def fit(self, optimizer, loss, num_epochs=10, lr=0.001, metrics: list = None, schedulers: list = None):
+        train_metrics_history: list[dict] = []
+        test_metrics_history: list[dict] = []
+
         if isinstance(optimizer, str):  # if optimizer passed as class name
             if hasattr(optim, optimizer):
                 optimizer = getattr(optim, optimizer)
@@ -133,6 +137,7 @@ class Trainer:
                 metric.reset()
 
             train_metrics["Loss"] = loss_train / total_train
+            train_metrics_history.append(train_metrics)
 
             # evaluation
             self.model.eval()
@@ -165,6 +170,7 @@ class Trainer:
                 metric.reset()
 
             test_metrics["Loss"] = loss_test / total_test
+            test_metrics_history.append(test_metrics)
 
             print(f"Epoch {epoch + 1} / {num_epochs}")
 
@@ -173,3 +179,21 @@ class Trainer:
 
             for metric, value in test_metrics.items():
                 print(f"[TEST] {metric} = {value}")
+
+            fig, ax = plt.subplots((len(train_metrics.keys()) + 1) // 2, 2, figsize=(10, 3 * (len(train_metrics.keys()) + 1) // 2))
+            ax = ax.flatten()
+
+            for i, key in enumerate(train_metrics.keys()):
+                train_values = list(map(lambda x: x[key], train_metrics_history))
+                test_values = list(map(lambda x: x[key], test_metrics_history))
+                coords = list(range(1, epoch + 2))
+
+                ax[i].plot(coords, train_values, label=f'Train')
+                ax[i].plot(coords, test_values, label=f'Test')
+
+                ax[i].set_xlabel("Epoch")
+                ax[i].set_ylabel(key)
+                ax[i].set_title(key)
+                ax[i].legend()
+
+            plt.show()
