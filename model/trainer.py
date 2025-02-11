@@ -76,7 +76,7 @@ class Trainer:
         if device is None:
             if torch.cuda.is_available():
                 device = torch.device('cuda')
-            elif torch.mps.is_available():
+            elif hasattr(torch, 'mps') and torch.mps.is_available():
                 device = torch.device('mps')
             else:
                 device = torch.device('cpu')

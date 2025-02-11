@@ -61,5 +61,5 @@ test_ds = DatasetWrapper(split_dataset['test'], p_noise=0, p_smooth=0, p_resampl
 
 model = VoicePredictor(cnt_users)
 
-trainer = Trainer(model, train_ds, test_ds, 4, torch.device('mps'))
+trainer = Trainer(model, train_ds, test_ds, 4)
 trainer.fit('Adam', nn.CrossEntropyLoss(), metrics=[MulticlassAccuracy()])
