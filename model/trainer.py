@@ -85,6 +85,12 @@ class Trainer:
         self.device = device
         self.model = model.to(device)
 
+        for param in self.model.parameters():
+            param.requires_grad = False
+
+        for param in self.model.classifier.parameters():
+            param.requires_grad = True
+
     def fit(self, optimizer, loss, num_epochs=10, lr=0.001, metrics: list = None, schedulers: list = None):
         train_metrics_history: list[dict] = []
         test_metrics_history: list[dict] = []

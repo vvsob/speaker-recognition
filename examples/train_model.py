@@ -18,7 +18,7 @@ from torcheval.metrics import MulticlassAccuracy
 
 import numpy as np
 
-cnt_users = 2
+cnt_users = 5
 
 if not os.path.exists("dataset"):
     cv_11 = load_dataset("mozilla-foundation/common_voice_11_0", "ru", split="train[:1000]", data_dir="dataset")
@@ -83,7 +83,7 @@ split_dataset = cv_11.train_test_split(
     seed=52
 )
 
-train_ds = DatasetWrapper(split_dataset['train'], p_noise=0, p_smooth=0, p_resample=0, max_noise_intensity=0.02,
+train_ds = DatasetWrapper(split_dataset['train'], p_noise=0.3, p_smooth=0.3, p_resample=0.3, max_noise_intensity=0.02,
                     smoothness_factor=40, min_resample=4000, max_resample=8000)
 
 test_ds = DatasetWrapper(split_dataset['test'], p_noise=0, p_smooth=0, p_resample=0, max_noise_intensity=0,
