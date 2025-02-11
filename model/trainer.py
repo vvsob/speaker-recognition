@@ -91,6 +91,9 @@ class Trainer:
         for param in self.model.classifier.parameters():
             param.requires_grad = True
 
+        print("Total params:", sum(p.numel() for p in self.model.parameters()))
+        print("Trainable params:", sum(p.numel() for p in self.model.parameters() if p.requires_grad))
+
     def fit(self, optimizer, loss, num_epochs=10, lr=0.001, metrics: list = None, schedulers: list = None):
         train_metrics_history: list[dict] = []
         test_metrics_history: list[dict] = []
