@@ -23,6 +23,10 @@ torcheval = "^0.0.7"
 soundfile = "^0.13.1"
 llvmlite = ">=0.40.0"
 librosa = "^0.10.2.post1"
+matplotlib = "^3.10.0"
+noisereduce = "^3.0.3"
+plotly = "^6.0.0"
+streamlit = "^1.42.0"
 
 
 [build-system]
