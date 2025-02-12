@@ -1,3 +1,5 @@
+import os.path
+
 from datasets import load_dataset
 import torchaudio
 import torch
@@ -6,60 +8,91 @@ from dataset import DatasetWrapper
 from datetime import datetime
 from tqdm import tqdm
 import random
-from tqdm import tqdm
 from dataset import DatasetWrapper
+import datasets
+import sys
 
 from model.model import *
 from model.trainer import *
 
-from torcheval.metrics import MulticlassAccuracy
+from torcheval.metrics import MulticlassAccuracy, MulticlassF1Score
 
-cv_11 = load_dataset("mozilla-foundation/common_voice_11_0", "ru", split="train[:1000]", data_dir="dataset")
+import numpy as np
 
-users_records = dict()
+cnt_users = 6
 
-for i in tqdm(range(len(cv_11))):
-    if cv_11[i]['client_id'] not in users_records.keys():
-        users_records[cv_11[i]['client_id']] = 0
+names_to_id = {
+    "slava": 0,
+    "misha": 1,
+    "oleg": 2,
+    "bogdan": 3,
+    "dima": 4,
+    "artem": 5,
+    "lesha": 5,
+    "nastya": 5
+}
 
-    users_records[cv_11[i]['client_id']] += 1
+if not os.path.exists("dataset"):
+    os.mkdir("dataset")
 
-pairs = []
+    ds_train_list = []
+    ds_test_list = []
 
-for key, value in users_records.items():
-    pairs.append((key, value))
+    for user_name, client_id in names_to_id.items():
+        print(f"Processing {user_name}")
 
-pairs.sort(key=lambda x: -x[1])
+        dirname = f"voices/{user_name}"
+        for file in os.listdir(f"voices/{user_name}"):
+            print(f"-> {file}")
 
-cnt_users = min(5, len(pairs))
+            waveform, sample_rate = torchaudio.load(f"{dirname}/{file}")
+            waveform = waveform[0]
 
-hash_to_id = dict()
-for i in range(cnt_users):
-    hash_to_id[pairs[i][0]] = i
+            step = 5 * sample_rate
 
-cv_11 = cv_11.filter(lambda x: x['client_id'] in hash_to_id.keys())
+            wf_max = waveform.max()
+
+            for start in range(0, waveform.shape[0], step):
+                frag = waveform[start:start+step]
+
+                if frag.max() / wf_max > 0.4:
+                    if start / waveform.shape[0] < 0.2:
+                        ds_test_list.append({
+                            'audio': {
+                                'array': frag,
+                                'sampling_rate': sample_rate
+                            },
+                            'client_id': client_id
+                        })
+                    else:
+                        ds_train_list.append({
+                            'audio': {
+                                'array': frag,
+                                'sampling_rate': sample_rate
+                            },
+                            'client_id': client_id
+                        })
+    train_ds = datasets.Dataset.from_list(ds_train_list)
+    test_ds = datasets.Dataset.from_list(ds_test_list)
+
+    train_ds.save_to_disk("dataset/train")
+    test_ds.save_to_disk("dataset/test")
+else:
+    train_ds = datasets.load_from_disk("dataset/train")
+    test_ds = datasets.load_from_disk("dataset/test")
 
 
-def update_ids(row):
-    row['client_id'] = hash_to_id[row['client_id']]
-    return row
+print(f"Train size: {len(train_ds)}")
+print(f"Test size: {len(test_ds)}")
 
 
-cv_11 = cv_11.map(update_ids)
+train_ds = DatasetWrapper(train_ds, p_noise=0.5, p_smooth=0.5, p_resample=0.5, max_noise_intensity=0.05,
+                    smoothness_factor=100, min_resample=4000, max_resample=8000)
 
-split_dataset = cv_11.train_test_split(
-    test_size=0.2,
-    shuffle=True,
-    seed=52
-)
-
-train_ds = DatasetWrapper(split_dataset['train'], p_noise=0.1, p_smooth=0.1, p_resample=0.1, max_noise_intensity=0.02,
-                    smoothness_factor=40, min_resample=4000, max_resample=8000)
-
-test_ds = DatasetWrapper(split_dataset['test'], p_noise=0, p_smooth=0, p_resample=0, max_noise_intensity=0,
+test_ds = DatasetWrapper(test_ds, p_noise=0, p_smooth=0, p_resample=0, max_noise_intensity=0,
                     smoothness_factor=0, min_resample=0, max_resample=0)
 
 model = VoicePredictor(cnt_users)
 
 trainer = Trainer(model, train_ds, test_ds, 4)
-trainer.fit('Adam', nn.CrossEntropyLoss(), metrics=[MulticlassAccuracy()])
+trainer.fit('Adam', nn.CrossEntropyLoss(), metrics=[MulticlassAccuracy(), MulticlassF1Score()], checkpoint_metric=MulticlassF1Score())
