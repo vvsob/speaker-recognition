@@ -30,14 +30,14 @@ names_to_id = {
     "dima": 4,
     "artem": 5,
     "lesha": 5,
-    "nastya": 5
+    "nastya": 5,
+    "other-1": 5,
+    "other-2": 5
 }
 
-if not os.path.exists("dataset"):
-    os.mkdir("dataset")
 
-    ds_train_list = []
-    ds_test_list = []
+def get_data(left, right, frag_length):
+    ds_list = []
 
     for user_name, client_id in names_to_id.items():
         print(f"Processing {user_name}")
@@ -49,7 +49,12 @@ if not os.path.exists("dataset"):
             waveform, sample_rate = torchaudio.load(f"{dirname}/{file}")
             waveform = waveform[0]
 
-            step = 10 * sample_rate
+            left_b = int(left * waveform.shape[0])
+            right_b = int(right * waveform.shape[0])
+
+            waveform = waveform[left_b:right_b]
+
+            step = frag_length * sample_rate
 
             wf_max = waveform.max()
 
@@ -57,24 +62,25 @@ if not os.path.exists("dataset"):
                 frag = waveform[start:start+step]
 
                 if frag.max() / wf_max > 0.4:
-                    if start / waveform.shape[0] < 0.2:
-                        ds_test_list.append({
-                            'audio': {
-                                'array': frag,
-                                'sampling_rate': sample_rate
-                            },
-                            'client_id': client_id
-                        })
-                    else:
-                        ds_train_list.append({
-                            'audio': {
-                                'array': frag,
-                                'sampling_rate': sample_rate
-                            },
-                            'client_id': client_id
-                        })
-    train_ds = datasets.Dataset.from_list(ds_train_list)
-    test_ds = datasets.Dataset.from_list(ds_test_list)
+                    ds_list.append({
+                        'audio': {
+                            'array': frag,
+                            'sampling_rate': sample_rate
+                        },
+                        'client_id': client_id
+                    })
+
+    return ds_list
+
+
+if not os.path.exists("dataset"):
+    os.mkdir("dataset")
+
+    ds_train_list = []
+    ds_test_list = []
+
+    train_ds = datasets.Dataset.from_list(get_data(0.15, 1, 10))
+    test_ds = datasets.Dataset.from_list(get_data(0, 0.15, 5))
 
     train_ds.save_to_disk("dataset/train")
     test_ds.save_to_disk("dataset/test")
@@ -87,7 +93,7 @@ print(f"Train size: {len(train_ds)}")
 print(f"Test size: {len(test_ds)}")
 
 
-train_ds = DatasetWrapper(train_ds, p_noise=0.5, p_smooth=0.5, p_resample=0.5, min_fragment_length=4, max_fragment_length=6)
+train_ds = DatasetWrapper(train_ds, p_noise=0.15, p_smooth=0.15, p_resample=0.15, min_fragment_length=4, max_fragment_length=6)
 test_ds = DatasetWrapper(test_ds, p_noise=0, p_smooth=0, p_resample=0)
 
 model = VoicePredictor(cnt_users)
