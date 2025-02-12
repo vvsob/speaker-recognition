@@ -69,8 +69,8 @@ class AudioProcessor:
 
     def get_user(self, audio_data):
         array, sampling_rate = load_audio_from_wave_object(wave.open(BytesIO(audio_data)))
-        id = self.classifier.get_id(array, sampling_rate)
-        return id, self.id_map.get(id, None)
+        id, probabilities = self.classifier.get_id_probabilities(array, sampling_rate)
+        return id, self.id_map.get(id, None), probabilities
 
 
 def main():
@@ -78,13 +78,12 @@ def main():
 
     audio_processor = get_audio_processor()
 
-    st.write("Click the button to start recording:")
-    audio_data = st.audio_input("Audio recorder")
+    audio_data = st.audio_input("Запишите звук для снятия биометрических данных")
     if audio_data:
-        id, name = audio_processor.get_user(audio_data.getvalue())
+        id, name, probabilities = audio_processor.get_user(audio_data.getvalue())
+        st.write(f"id: {id}")
         if name is not None:
             st.write(f"Name: {name}")
-        st.write(f"id: {id}")
 
 if __name__ == "__main__":
     main()
