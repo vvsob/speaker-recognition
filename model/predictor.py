@@ -40,4 +40,4 @@ class Predictor:
 
         predicts = torch.softmax(self.model(inp.to(self.device)), dim=1)[0]
 
-        return int(torch.argmax(predicts, dim=0))
+        return predicts
