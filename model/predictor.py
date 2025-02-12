@@ -22,22 +22,23 @@ class Predictor:
         self.model.load_state_dict(checkpoint['model_state_dict'])
 
     def predict(self, waveform: torch.Tensor, sample_rate):
-        if len(waveform.shape) > 1:
-            waveform = waveform[0]
+        with torch.no_grad():
+            if len(waveform.shape) > 1:
+                waveform = waveform[0]
 
-        waveform = torchaudio.functional.resample(waveform, sample_rate, 16000)
+            waveform = torchaudio.functional.resample(waveform, sample_rate, 16000)
 
-        inputs = self.feature_extractor(
-            [waveform],
-            sampling_rate=self.feature_extractor.sampling_rate,
-            return_tensors="pt",
-            padding="longest",
-            truncation=True,
-            max_length=16000 * 5
-        )
+            inputs = self.feature_extractor(
+                [waveform],
+                sampling_rate=self.feature_extractor.sampling_rate,
+                return_tensors="pt",
+                padding="longest",
+                truncation=True,
+                max_length=16000 * 5
+            )
 
-        inp = inputs['input_values'][0].to(self.device)
+            inp = inputs['input_values'][0].to(self.device)
 
-        predicts = torch.softmax(self.model(inp.to(self.device)), dim=1)[0]
+            predicts = torch.softmax(self.model(inp.to(self.device)), dim=1)[0]
 
         return predicts
