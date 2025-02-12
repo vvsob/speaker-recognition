@@ -86,11 +86,8 @@ print(f"Train size: {len(train_ds)}")
 print(f"Test size: {len(test_ds)}")
 
 
-train_ds = DatasetWrapper(train_ds, p_noise=0.5, p_smooth=0.5, p_resample=0.5, max_noise_intensity=0.05,
-                    smoothness_factor=100, min_resample=4000, max_resample=8000)
-
-test_ds = DatasetWrapper(test_ds, p_noise=0, p_smooth=0, p_resample=0, max_noise_intensity=0,
-                    smoothness_factor=0, min_resample=0, max_resample=0)
+train_ds = DatasetWrapper(train_ds, p_noise=0.5, p_smooth=0.5, p_resample=0.5)
+test_ds = DatasetWrapper(test_ds, p_noise=0, p_smooth=0, p_resample=0)
 
 model = VoicePredictor(cnt_users)
 

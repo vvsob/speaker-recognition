@@ -22,8 +22,7 @@ model = VoicePredictor(num_classes=6).to(device)
 checkpoint = torch.load(input("Model pth file: "), map_location=device)
 model.load_state_dict(checkpoint['model_state_dict'])
 
-test_ds = DatasetWrapper(datasets.load_from_disk("dataset/test"),
-                         p_noise=0, p_smooth=0, p_resample=0, max_noise_intensity=0, smoothness_factor=0, min_resample=0, max_resample=0)
+test_ds = DatasetWrapper(datasets.load_from_disk("dataset/test"), p_noise=0, p_smooth=0, p_resample=0)
 
 batch_size = 4
 test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
