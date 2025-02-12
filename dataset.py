@@ -4,8 +4,11 @@ import torch
 import torch.nn.functional as F
 import torchaudio.functional as FF
 
+
 class DatasetWrapper:
-    def __init__(self, data, sampling_rate=16000, name=None, p_noise=0.0, p_smooth=0.0, p_resample=0.0, max_noise_intensity=0.02, smoothness_factor=40, min_resample=4000, max_resample=8000 ):
+    def __init__(self, data, sampling_rate=16000, name=None, p_noise=0.0, p_smooth=0.0, p_resample=0.0,
+                 max_noise_intensity=0.02, min_smoothness_factor=20,
+                 max_smoothness_factor=100, smoothness_factors_step=10, min_resample=4000, max_resample=8000):
         """
         Initializes the DatasetWrapper.  Assumes input is always a Dataset.
 
@@ -17,7 +20,9 @@ class DatasetWrapper:
             p_smooth: The probability of smoothing.
             p_resample: The probability of resampling.
             max_noise_intensity: The maximum intensity of the noise.
-            smoothness_factor: The smoothness factor.
+            min_smoothness_factor: The minimum smoothness factor.
+            max_smoothness_factor: The maximum smoothness factor.
+            smoothness_factors_step: Regulates the step of kernels dimensions for smoothing sound.
             min_resample: The minimum resample rate.
             max_resample: The maximum resample rate.
         """
@@ -42,19 +47,21 @@ class DatasetWrapper:
         self.p_smooth = p_smooth
         self.p_resample = p_resample
         self.noise_intensity = max_noise_intensity
-        self.smoothness_factor = smoothness_factor
         self.random_sampling_rates = range(min_resample, max_resample + 1, 1000)
+        self.kernels = [self.get_kernel(smoothness_factor) for smoothness_factor in
+                        range(min_smoothness_factor, max_smoothness_factor + 1, smoothness_factors_step)]
 
+    def get_kernel(self, smoothness_factor):
         factors = [1.0]
-        for i in range(self.smoothness_factor-1):
-            new_factors = [factors[0]/2]
-            for j in range(len(factors)-1):
-                new_factors.append((factors[j] + factors[j+1])/2)
-            new_factors.append(factors[0]/2)
-            factors=new_factors
-
-        self.smoothness_kernel = torch.tensor(factors, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
-        self.smoothness_padding = (self.smoothness_kernel.size(-1) - 1) // 2
+        for i in range(smoothness_factor - 1):
+            new_factors = [factors[0] / 2]
+            for j in range(len(factors) - 1):
+                new_factors.append((factors[j] + factors[j + 1]) / 2)
+            new_factors.append(factors[0] / 2)
+            factors = new_factors
+        kernel = torch.tensor(factors, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+        padding = (kernel.size(-1) - 1) // 2
+        return (kernel, padding)
 
     def __len__(self):
         return len(self.dataset)
@@ -67,7 +74,8 @@ class DatasetWrapper:
             noise = torch.randn_like(array) * resulting_noise_intensity
             array = array + noise
         if random.random() < self.p_smooth:
-            array = F.conv1d(array, self.smoothness_kernel, padding=self.smoothness_padding).squeeze().unsqueeze(0)
+            kernel, padding = random.choice(self.kernels)
+            array = F.conv1d(array, kernel, padding=padding).squeeze().unsqueeze(0)
         if random.random() < self.p_resample:
             new_sampling_rate = random.choice(self.random_sampling_rates)
             array = FF.resample(array, sampling_rate, new_sampling_rate)
@@ -78,7 +86,8 @@ class DatasetWrapper:
 
     def __getitem__(self, idx):
         raw_item = self.dataset[idx]
-        item = {"array": torch.FloatTensor(raw_item["audio"]["array"]).unsqueeze(0), "sampling_rate": raw_item["audio"]["sampling_rate"],
+        item = {"array": torch.FloatTensor(raw_item["audio"]["array"]).unsqueeze(0),
+                "sampling_rate": raw_item["audio"]["sampling_rate"],
                 "speaker_id": raw_item["client_id"]}
         return self.augmentate(item)
 
