@@ -11,7 +11,7 @@ elif hasattr(torch, 'mps') and torch.mps.is_available():
 else:
     device = torch.device('cpu')
 
-waveform, sample_rate = torchaudio.load('/Users/chertan/PycharmProjects/speaker-recognition/voices/slava/Слава_pixel.wav')
+waveform, sample_rate = torchaudio.load(input("Sound file location: "))
 waveform = waveform[0]
 
 mid = waveform.shape[0]
