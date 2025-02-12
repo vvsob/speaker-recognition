@@ -15,7 +15,8 @@ import sys
 from model.model import *
 from model.trainer import *
 
-from torcheval.metrics import MulticlassAccuracy, MulticlassF1Score
+from torcheval.metrics import MulticlassAccuracy
+from model.metrics import MulticlassF1Score
 
 import numpy as np
 
@@ -55,7 +56,7 @@ if not os.path.exists("dataset"):
             for start in range(0, waveform.shape[0], step):
                 frag = waveform[start:start+step]
 
-                if frag.max() / wf_max > 0.4:
+                if frag.max() / wf_max > 0.4 and random.random() < 0.05:
                     if start / waveform.shape[0] < 0.2:
                         ds_test_list.append({
                             'audio': {
@@ -91,5 +92,5 @@ test_ds = DatasetWrapper(test_ds, p_noise=0, p_smooth=0, p_resample=0)
 
 model = VoicePredictor(cnt_users)
 
-trainer = Trainer(model, train_ds, test_ds, 4)
-trainer.fit('Adam', nn.CrossEntropyLoss(), metrics=[MulticlassAccuracy(), MulticlassF1Score()], checkpoint_metric=MulticlassF1Score())
+trainer = Trainer(model, train_ds, test_ds, 16)
+trainer.fit('Adam', nn.CrossEntropyLoss(), num_epochs=200, metrics=[MulticlassAccuracy()], checkpoint_metric=MulticlassAccuracy())

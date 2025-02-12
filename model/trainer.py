@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 
 def extract_features(waveforms):
-    feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained("facebook/hubert-large-ls960-ft")
+    feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained("superb/wav2vec2-base-superb-sid")
 
     TARGET_LENGTH = 16000 * 5  # 80000 samples
 
@@ -231,7 +231,6 @@ class Trainer:
             plt.savefig(f"{self.output_dir}/plots/{epoch + 1}.jpg")
 
             with open(f"{self.output_dir}/train_history.json", 'w') as f:
-                print(train_metrics_history)
                 json.dump(train_metrics_history, f)
 
             with open(f"{self.output_dir}/test_history.json", 'w') as f:
