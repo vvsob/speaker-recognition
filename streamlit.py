@@ -6,7 +6,7 @@ from io import BytesIO
 torch.classes.__path__ = []
 
 import streamlit as st
-from mod import Model
+from model.classifier import Classifier
 
 def load_audio_from_wave_object(wave_obj):
     """Loads audio data from a wave.Wave_read object into a Torch tensor.
@@ -64,13 +64,12 @@ def get_audio_processor():
 
 class AudioProcessor:
     def __init__(self):
-        self.model = Model()
-        self.id_map = {"0": "Вячеслав Чертан", "1": "Олег Соболев", "2": "Михаил Рыбалков"} # temporary mapping
+        self.classifier = Classifier()
+        self.id_map = {"0": "Вячеслав Чертан", "1": "Миша Рыбалков", "2": "Олюбочка Соболь", "3": "Путис", "4": "Дима Авдеев", "5": "Азер"} # temporary mapping
 
     def get_user(self, audio_data):
         array, sampling_rate = load_audio_from_wave_object(wave.open(BytesIO(audio_data)))
-        torchaudio.save("tmp.wav", array, sampling_rate)
-        id = self.model.predict(array, sampling_rate)
+        id = self.classifier.get_id(array, sampling_rate)
         return id, self.id_map.get(id, None)
 
 

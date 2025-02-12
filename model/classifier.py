@@ -1,0 +1,16 @@
+from model.predictor import Predictor
+import torch
+
+
+class Classifier:
+    def __init__(self, model_path="best_checkpoint.pth"):
+        self.predictor = Predictor(6, model_path)
+
+    def get_id(self, array, sampling_rate, window_length=5):
+        n_samples = int(array.shape[1])
+        window = window_length * sampling_rate
+        predictions = [self.predictor.predict(array[:, start:min(start + window, n_samples)], sampling_rate) for start in
+                                    range(0, n_samples, window)]
+        result = int(torch.argmax(sum(predictions)))
+        # result = "\n".join(str(predictions) for predictions in predictions)
+        return str(result)
