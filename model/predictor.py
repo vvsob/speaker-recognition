@@ -1,7 +1,7 @@
 import torch
 import torchaudio
 from model.model import VoicePredictor
-from transformers import Wav2Vec2FeatureExtractor
+from model.trainer import extract_features
 
 
 class Predictor:
@@ -15,7 +15,6 @@ class Predictor:
                 device = torch.device('cpu')
 
         self.device = device
-        self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained("facebook/hubert-large-ls960-ft")
         self.model = VoicePredictor(num_classes=num_classes).to(device)
 
         checkpoint = torch.load(checkpoint_path, map_location=device)
@@ -29,17 +28,7 @@ class Predictor:
                 waveform = waveform[0]
 
             waveform = torchaudio.functional.resample(waveform, sample_rate, 16000)
-
-            inputs = self.feature_extractor(
-                [waveform],
-                sampling_rate=self.feature_extractor.sampling_rate,
-                return_tensors="pt",
-                padding="longest",
-                truncation=True,
-                max_length=16000 * 5
-            )
-
-            inp = inputs['input_values'][0].to(self.device)
+            inp = extract_features([waveform]).to(self.device)
 
             predicts = torch.softmax(self.model(inp.to(self.device)), dim=1)[0]
 
