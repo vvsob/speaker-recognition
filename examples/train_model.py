@@ -33,7 +33,10 @@ names_to_id = {
 }
 
 if not os.path.exists("dataset"):
-    ds_list = []
+    os.mkdir("dataset")
+
+    ds_train_list = []
+    ds_test_list = []
 
     for user_name, client_id in names_to_id.items():
         print(f"Processing {user_name}")
@@ -53,30 +56,40 @@ if not os.path.exists("dataset"):
                 frag = waveform[start:start+step]
 
                 if frag.max() / wf_max > 0.4:
-                    ds_list.append({
-                        'audio': {
-                            'array': frag,
-                            'sampling_rate': sample_rate
-                        },
-                        'client_id': client_id
-                    })
+                    if start / waveform.shape[0] < 0.2:
+                        ds_test_list.append({
+                            'audio': {
+                                'array': frag,
+                                'sampling_rate': sample_rate
+                            },
+                            'client_id': client_id
+                        })
+                    else:
+                        ds_train_list.append({
+                            'audio': {
+                                'array': frag,
+                                'sampling_rate': sample_rate
+                            },
+                            'client_id': client_id
+                        })
+    train_ds = datasets.Dataset.from_list(ds_train_list)
+    test_ds = datasets.Dataset.from_list(ds_test_list)
 
-    ds = datasets.Dataset.from_list(ds_list)
-    ds.save_to_disk("dataset")
+    train_ds.save_to_disk("dataset/train")
+    test_ds.save_to_disk("dataset/test")
 else:
-    ds = datasets.load_from_disk("dataset")
-
-split_dataset = ds.train_test_split(
-    test_size=0.2,
-    shuffle=True,
-    seed=52
-)
+    train_ds = datasets.load_from_disk("dataset/train")
+    test_ds = datasets.load_from_disk("dataset/test")
 
 
-train_ds = DatasetWrapper(split_dataset['train'], p_noise=0.3, p_smooth=0.3, p_resample=0.3, max_noise_intensity=0.02,
-                    smoothness_factor=40, min_resample=4000, max_resample=8000)
+print(f"Train size: {len(train_ds)}")
+print(f"Test size: {len(test_ds)}")
 
-test_ds = DatasetWrapper(split_dataset['test'], p_noise=0, p_smooth=0, p_resample=0, max_noise_intensity=0,
+
+train_ds = DatasetWrapper(train_ds, p_noise=0.5, p_smooth=0.5, p_resample=0.5, max_noise_intensity=0.05,
+                    smoothness_factor=100, min_resample=4000, max_resample=8000)
+
+test_ds = DatasetWrapper(test_ds, p_noise=0, p_smooth=0, p_resample=0, max_noise_intensity=0,
                     smoothness_factor=0, min_resample=0, max_resample=0)
 
 model = VoicePredictor(cnt_users)
