@@ -8,7 +8,7 @@ import torchaudio.functional as FF
 class DatasetWrapper:
     def __init__(self, data, sampling_rate=16000, name=None, p_noise=0.0, p_smooth=0.0, p_resample=0.0,
                  max_noise_intensity=0.02, min_smoothness_factor=20,
-                 max_smoothness_factor=100, smoothness_factors_step=10, min_resample=4000, max_resample=8000):
+                 max_smoothness_factor=100, smoothness_factors_step=10, min_resample=4000, max_resample=8000, min_fragment_length=None, max_fragment_length=None):
         """
         Initializes the DatasetWrapper.  Assumes input is always a Dataset.
 
@@ -51,6 +51,9 @@ class DatasetWrapper:
         self.kernels = [self.get_kernel(smoothness_factor) for smoothness_factor in
                         range(min_smoothness_factor, max_smoothness_factor + 1, smoothness_factors_step)]
 
+        self.min_fragment_length = min_fragment_length
+        self.max_fragment_length = max_fragment_length
+
     def get_kernel(self, smoothness_factor):
         factors = [1.0]
         for i in range(smoothness_factor - 1):
@@ -82,6 +85,14 @@ class DatasetWrapper:
             sampling_rate = new_sampling_rate
         item["array"] = FF.resample(array, sampling_rate, self.sampling_rate)[:1]
         item["sampling_rate"] = self.sampling_rate
+
+        if self.min_fragment_length and self.max_fragment_length:  # get random segment of wav
+            fragment_length = int(self.sampling_rate * (self.min_fragment_length + random.random() * (self.max_fragment_length - self.min_fragment_length)))
+            fragment_length = min(fragment_length, item["array"].shape[1])
+            start = random.randint(0, item["array"].shape[1] - fragment_length)
+
+            item["array"] = item["array"][:, start:start+fragment_length]
+
         return item
 
     def __getitem__(self, idx):

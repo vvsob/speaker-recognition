@@ -49,7 +49,7 @@ if not os.path.exists("dataset"):
             waveform, sample_rate = torchaudio.load(f"{dirname}/{file}")
             waveform = waveform[0]
 
-            step = 5 * sample_rate
+            step = 10 * sample_rate
 
             wf_max = waveform.max()
 
@@ -87,7 +87,7 @@ print(f"Train size: {len(train_ds)}")
 print(f"Test size: {len(test_ds)}")
 
 
-train_ds = DatasetWrapper(train_ds, p_noise=0.5, p_smooth=0.5, p_resample=0.5)
+train_ds = DatasetWrapper(train_ds, p_noise=0.5, p_smooth=0.5, p_resample=0.5, min_fragment_length=4, max_fragment_length=6)
 test_ds = DatasetWrapper(test_ds, p_noise=0, p_smooth=0, p_resample=0)
 
 model = VoicePredictor(cnt_users)
