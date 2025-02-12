@@ -43,6 +43,9 @@ if not os.path.exists("dataset"):
     ds_test_list = []
 
     for user_name, client_id in names_to_id.items():
+        if not os.path.exists(f"voices/{user_name}"):
+            continue
+
         print(f"Processing {user_name}")
 
         dirname = f"voices/{user_name}"
