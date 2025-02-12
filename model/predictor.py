@@ -38,6 +38,6 @@ class Predictor:
 
         inp = inputs['input_values'][0].to(self.device)
 
-        predicts = torch.softmax(self.model(inp.to(torch.device('mps'))), dim=1)[0]
+        predicts = torch.softmax(self.model(inp.to(self.device)), dim=1)[0]
 
         return int(torch.argmax(predicts, dim=0))
