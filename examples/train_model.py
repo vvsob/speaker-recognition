@@ -36,8 +36,11 @@ names_to_id = {
 }
 
 
-def get_data(left, right, frag_length):
-    ds_list = []
+if not os.path.exists("dataset"):
+    os.mkdir("dataset")
+
+    ds_train_list = []
+    ds_test_list = []
 
     for user_name, client_id in names_to_id.items():
         print(f"Processing {user_name}")
@@ -49,20 +52,18 @@ def get_data(left, right, frag_length):
             waveform, sample_rate = torchaudio.load(f"{dirname}/{file}")
             waveform = waveform[0]
 
-            left_b = int(left * waveform.shape[0])
-            right_b = int(right * waveform.shape[0])
-
-            waveform = waveform[left_b:right_b]
-
-            step = frag_length * sample_rate
+            step = 5 * sample_rate
 
             wf_max = waveform.max()
 
-            for start in range(0, waveform.shape[0], step):
-                frag = waveform[start:start+step]
+            start = 0
+            cnt_iters = 0
 
-                if frag.max() / wf_max > 0.4:
-                    ds_list.append({
+            while start < waveform.shape[0]:
+                if cnt_iters % 5 == 0:
+                    frag = waveform[start:start + step]
+
+                    ds_test_list.append({
                         'audio': {
                             'array': frag,
                             'sampling_rate': sample_rate
@@ -70,17 +71,24 @@ def get_data(left, right, frag_length):
                         'client_id': client_id
                     })
 
-    return ds_list
+                    start += step
+                else:
+                    frag = waveform[start:start + 2 * step]
 
+                    ds_train_list.append({
+                        'audio': {
+                            'array': frag,
+                            'sampling_rate': sample_rate
+                        },
+                        'client_id': client_id
+                    })
 
-if not os.path.exists("dataset"):
-    os.mkdir("dataset")
+                    start += 2 * step
 
-    ds_train_list = []
-    ds_test_list = []
+                cnt_iters += 1
 
-    train_ds = datasets.Dataset.from_list(get_data(0.15, 1, 10))
-    test_ds = datasets.Dataset.from_list(get_data(0, 0.15, 5))
+    train_ds = datasets.Dataset.from_list(ds_train_list)
+    test_ds = datasets.Dataset.from_list(ds_test_list)
 
     train_ds.save_to_disk("dataset/train")
     test_ds.save_to_disk("dataset/test")
