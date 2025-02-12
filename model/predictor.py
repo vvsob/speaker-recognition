@@ -18,6 +18,8 @@ class Predictor:
         self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained("facebook/hubert-large-ls960-ft")
         self.model = VoicePredictor(num_classes=num_classes).to(device)
 
+        self.model.eval()
+
         checkpoint = torch.load(checkpoint_path, map_location=device)
         self.model.load_state_dict(checkpoint['model_state_dict'])
 
