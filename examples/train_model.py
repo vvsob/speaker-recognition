@@ -56,7 +56,7 @@ if not os.path.exists("dataset"):
             for start in range(0, waveform.shape[0], step):
                 frag = waveform[start:start+step]
 
-                if frag.max() / wf_max > 0.4 and random.random() < 0.05:
+                if frag.max() / wf_max > 0.4:
                     if start / waveform.shape[0] < 0.2:
                         ds_test_list.append({
                             'audio': {
