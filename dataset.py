@@ -100,7 +100,10 @@ class DatasetWrapper:
             item["array"] = item["array"][:, start:start+fragment_length]
 
         if self.tg:
-            item["array"] = self.tg(item["array"])
+            try:
+                item["array"] = self.tg(item["array"])
+            except:  # when errors on noise cancellation
+                pass
 
         return item
 
