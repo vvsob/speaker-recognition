@@ -76,8 +76,8 @@ class AudioProcessor:
         self.classifier = Classifier()
         self.id_map = {0: "Вячеслав Чертан", 1: "Миша Рыбалков", 2: "Олюбочка Соболь", 3: "Путис", 4: "Дима Авдеев",
                        5: "Азер"}
-        self.array=None
-        self.sampling_rate=None
+        self.array = None
+        self.sampling_rate = None
 
     def get_user(self, audio_data):
         self.array, self.sampling_rate = load_audio_from_wave_object(wave.open(BytesIO(audio_data)))
@@ -92,16 +92,16 @@ class AudioProcessor:
         return self.id_map
 
     def wrap_probabilities(self, probabilities):
-        speaker_probabilities = sorted([(speaker, float(probabilities[id])) for id, speaker in self.id_map.items()], key=lambda x: -x[1])
+        speaker_probabilities = sorted([(speaker, float(probabilities[id])) for id, speaker in self.id_map.items()],
+                                       key=lambda x: -x[1])
         return "##### " + "\n##### ".join(
             [f"{speaker}: {"{:.4f}".format(prob)}" for speaker, prob in speaker_probabilities])
 
-    # files - list of pairs of (torchaudio.load(***), "filename")
     def get_figure(self, file, fmax=16000, graph_size=3):
         base_scale = 100
 
         array, sampling_rate = file
-        length_seconds = array.shape[1]//sampling_rate
+        length_seconds = array.shape[1] // sampling_rate
 
         fig = make_subplots(rows=3, cols=1, )
 

@@ -10,7 +10,8 @@ class Classifier:
         n_samples = int(array.shape[1])
         window = window_length * sampling_rate
         predictions = \
-            [self.predictor.predict(array[:, start:min(start + window, n_samples)], sampling_rate) * ((min(start + window, n_samples) - start) / window) for start in
+            [self.predictor.predict(array[:, start:min(start + window, n_samples)], sampling_rate) * (
+                        (min(start + window, n_samples) - start) / window) for start in
              range(0, n_samples, window)]
         result = sum(predictions)
         result /= sum(result)
