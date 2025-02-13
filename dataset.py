@@ -62,6 +62,7 @@ class DatasetWrapper:
             self.tg = None
 
     def get_kernel(self, smoothness_factor):
+        """Count the binomial coefficients"""
         factors = [1.0]
         for i in range(smoothness_factor - 1):
             new_factors = [factors[0] / 2]
@@ -103,7 +104,7 @@ class DatasetWrapper:
         if self.tg:
             try:
                 item["array"] = self.tg(item["array"])
-            except:  # when errors on noise cancellation
+            except:  # when errors on noise cancellation with small files
                 pass
 
         return item

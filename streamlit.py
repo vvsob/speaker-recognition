@@ -9,6 +9,7 @@ import numpy as np
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
+# https://github.com/VikParuchuri/marker/issues/442#issuecomment-2636393925
 torch.classes.__path__ = []
 
 import streamlit as st
@@ -75,8 +76,8 @@ def get_audio_processor():
 class AudioProcessor:
     def __init__(self):
         self.classifier = Classifier()
-        self.id_map = {0: "Вячеслав Чертан", 1: "Миша Рыбалков", 2: "Олюбочка Соболь", 3: "Путис", 4: "Дима Авдеев",
-                       5: "Азер"}
+        self.id_map = {0: "Вячеслав Чертан", 1: "Миша Рыбалков", 2: "Олег Соболев", 3: "Богдан Панов", 4: "Дима Авдеев",
+                       5: "Другое"}
         self.array = None
         self.sampling_rate = None
         self.tg = None
@@ -98,6 +99,7 @@ class AudioProcessor:
     def wrap_probabilities(self, probabilities):
         speaker_probabilities = sorted([(speaker, float(probabilities[id])) for id, speaker in self.id_map.items()],
                                        key=lambda x: -x[1])
+        # Markdown header
         return "##### " + "\n##### ".join(
             [f"{speaker}: {"{:.4f}".format(prob)}" for speaker, prob in speaker_probabilities])
 
