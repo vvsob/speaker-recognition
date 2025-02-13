@@ -19,7 +19,7 @@ else:
     device = torch.device('cpu')
 
 model = VoicePredictor(num_classes=6).to(device)
-checkpoint = torch.load(input("Model pth file: "), map_location=device)
+checkpoint = torch.load(input("Model path file: "), map_location=device)
 model.load_state_dict(checkpoint['model_state_dict'])
 
 test_ds = DatasetWrapper(datasets.load_from_disk("dataset/test"), p_noise=0, p_smooth=0, p_resample=0)

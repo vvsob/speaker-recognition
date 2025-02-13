@@ -26,6 +26,8 @@ class DatasetWrapper:
             smoothness_factors_step: Regulates the step of kernels dimensions for smoothing sound.
             min_resample: The minimum resample rate.
             max_resample: The maximum resample rate.
+            min_fragment_length: The minimum fragment length.
+            max_fragment_length: The maximum fragment length.
         """
 
         if isinstance(data, list):
@@ -41,7 +43,6 @@ class DatasetWrapper:
         else:
             raise TypeError("Data must be a Hugging Face Dataset object or a list of dictionaries.")
 
-        self.dataset = data
         self.sampling_rate = sampling_rate
         self.name = name
         self.p_noise = p_noise

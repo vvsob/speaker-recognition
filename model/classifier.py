@@ -15,7 +15,6 @@ class Classifier:
              range(0, n_samples, window)]
         result = sum(predictions)
         result /= sum(result)
-        # result = "\n".join(str(predictions) for predictions in predictions)
         return result
 
     def get_id_probabilities(self, array, sampling_rate, window_length=5):
