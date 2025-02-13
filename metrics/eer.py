@@ -14,10 +14,6 @@ def calc_eer_for_binary_classification(targets_scores: torch.Tensor, imposter_sc
 
     Errors:
     - Returns NaN if either targets_scores or imposter_scores is empty.
-
-    The function iterates over `iters` threshold values, computes FAR and FRR at each step,
-    and determines the threshold where these rates are closest to being equal. The EER is the
-    average of FAR and FRR at this threshold.
     """
 
     if len(targets_scores) == 0 or len(imposter_scores) == 0:
@@ -46,7 +42,6 @@ def calc_eer_for_binary_classification(targets_scores: torch.Tensor, imposter_sc
             min_diff = diff
             eer = (far + frr) / 2
 
-    # return eer.item(), fars, frrs, dists
     return eer.item()
 
 
@@ -60,10 +55,6 @@ def calc_eer(target: torch.Tensor, predicted: torch.Tensor) -> torch.Tensor:
     :param target: torch.Tensor, a 1D tensor (N,) containing the true class labels.
     :param predicted: torch.Tensor, a 2D tensor (N, C), where N is the number of samples and C is the number of classes.
                       Each row contains the predicted scores or probabilities for each class.
-    :return: torch.Tensor, a 1D tensor (C,) containing the EER for each class.
-
-    The function iterates over all classes, treating each as the positive class and the rest as negative.
-    It then computes EER using `calc_eer_for_binary_classification` and returns the EER values for each class.
     """
 
     num_classes = predicted.shape[1]
@@ -76,5 +67,4 @@ def calc_eer(target: torch.Tensor, predicted: torch.Tensor) -> torch.Tensor:
         other = predicted[other_indices, cl]
         eer[cl] = calc_eer_for_binary_classification(fixed, other)
 
-    # return torch.nanmean(eer).item()
     return eer
