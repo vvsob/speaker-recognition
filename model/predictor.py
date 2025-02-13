@@ -22,7 +22,7 @@ class Predictor:
 
         self.model.eval()
 
-    def predict(self, waveform: torch.Tensor, sample_rate):
+    def predict(self, waveform: torch.Tensor, sample_rate) -> torch.Tensor:
         with torch.no_grad():
             if len(waveform.shape) > 1:
                 waveform = waveform[0]
