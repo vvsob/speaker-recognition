@@ -3,7 +3,7 @@ import torchaudio
 from dataset import DatasetWrapper
 import datasets
 
-from model.model import *
+from model.voice_predictor import *
 from model.trainer import *
 
 from torcheval.metrics import MulticlassAccuracy
@@ -93,8 +93,8 @@ print(f"Train size: {len(train_ds)}")
 print(f"Test size: {len(test_ds)}")
 
 
-train_ds = DatasetWrapper(train_ds, p_noise=0.15, p_smooth=0.15, p_resample=0.15, min_fragment_length=4, max_fragment_length=6, use_nc=True)
-test_ds = DatasetWrapper(test_ds, p_noise=0, p_smooth=0, p_resample=0, use_nc=True)
+train_ds = DatasetWrapper(train_ds, p_random_noise=0.15, p_smooth=0.15, p_resample=0.15, p_real_noise=0.4, min_fragment_length=4, max_fragment_length=6, noise_dir="noise")
+test_ds = DatasetWrapper(test_ds, p_random_noise=0, p_smooth=0, p_resample=0)
 
 model = VoicePredictor(cnt_users)
 
