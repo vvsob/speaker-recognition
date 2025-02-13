@@ -1391,6 +1391,28 @@ extra = ["lxml (>=4.6)", "pydot (>=3.0.1)", "pygraphviz (>=1.14)", "sympy (>=1.1
 test = ["pytest (>=7.2)", "pytest-cov (>=4.0)"]
 
 [[package]]
+name = "noisereduce"
+version = "3.0.3"
+description = "Noise reduction using Spectral Gating in Python"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "noisereduce-3.0.3-py3-none-any.whl", hash = "sha256:95cb64cfe29b5fa0311ac764755d2f503ae71571040693577796412be1a54b9d"},
+    {file = "noisereduce-3.0.3.tar.gz", hash = "sha256:ff64a28fb92e3c81f153cf29550e5c2db56b2523afa8f56f5e03c177cc5e918f"},
+]
+
+[package.dependencies]
+joblib = "*"
+matplotlib = "*"
+numpy = "*"
+scipy = "*"
+tqdm = "*"
+
+[package.extras]
+pytorch = ["torch (>=1.9.0)"]
+
+[[package]]
 name = "numba"
 version = "0.61.0"
 description = "compiling Python code using LLVM"
@@ -3139,4 +3161,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "9bed2e2a53936f9269f8385b90d70408a75611f5a5543509d292a11af007baf4"
+content-hash = "5e82704382ff63d0689024261e351e0c565f6f2f663d5f588d41ea96f43507ae"

@@ -3,12 +3,13 @@ import random
 import torch
 import torch.nn.functional as F
 import torchaudio.functional as FF
+from noisereduce.torchgate import TorchGate
 
 
 class DatasetWrapper:
     def __init__(self, data, sampling_rate=16000, name=None, p_noise=0.0, p_smooth=0.0, p_resample=0.0,
                  max_noise_intensity=0.02, min_smoothness_factor=20,
-                 max_smoothness_factor=100, smoothness_factors_step=10, min_resample=4000, max_resample=8000, min_fragment_length=None, max_fragment_length=None):
+                 max_smoothness_factor=100, smoothness_factors_step=10, min_resample=4000, max_resample=8000, min_fragment_length=None, max_fragment_length=None, use_nc=False):
         """
         Initializes the DatasetWrapper.  Assumes input is always a Dataset.
 
@@ -54,6 +55,11 @@ class DatasetWrapper:
         self.min_fragment_length = min_fragment_length
         self.max_fragment_length = max_fragment_length
 
+        if use_nc:
+            self.tg = TorchGate(sr=sampling_rate, nonstationary=False)
+        else:
+            self.tg = None
+
     def get_kernel(self, smoothness_factor):
         factors = [1.0]
         for i in range(smoothness_factor - 1):
@@ -92,6 +98,9 @@ class DatasetWrapper:
             start = random.randint(0, item["array"].shape[1] - fragment_length)
 
             item["array"] = item["array"][:, start:start+fragment_length]
+
+        if self.tg:
+            item["array"] = self.tg(item["array"])
 
         return item
 
