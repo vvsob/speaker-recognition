@@ -3,21 +3,24 @@ import random
 import torch
 import torch.nn.functional as F
 import torchaudio.functional as FF
-from noisereduce.torchgate import TorchGate
+import os
+import torchaudio
 
 
 class DatasetWrapper:
-    def __init__(self, data, sampling_rate=16000, name=None, p_noise=0.0, p_smooth=0.0, p_resample=0.0,
+    def __init__(self, data, sampling_rate=16000, name=None, p_random_noise=0.0, p_real_noise=0.0, p_smooth=0.0, p_resample=0.0,
                  max_noise_intensity=0.02, min_smoothness_factor=20,
-                 max_smoothness_factor=100, smoothness_factors_step=10, min_resample=4000, max_resample=8000, min_fragment_length=None, max_fragment_length=None, use_nc=False):
+                 max_smoothness_factor=100, smoothness_factors_step=10, min_resample=4000, max_resample=8000,
+                 min_fragment_length=None, max_fragment_length=None, noise_dir=None):
         """
-        Initializes the DatasetWrapper.  Assumes input is always a Dataset.
+        Initializes the DatasetWrapper.  Assumes input is always a Dataset or a list of dictionaries.
 
         Args:
-            data: The Hugging Face Dataset object.
+            data: The Hugging Face Dataset object or a list of dictionaries.
             sampling_rate: The target sampling rate of the audio.
             name: The name of the dataset.
-            p_noise: The probability of noise.
+            p_random_noise: The probability of random normal distributed noise.
+            p_real_noise: The probability of noise loaded from files
             p_smooth: The probability of smoothing.
             p_resample: The probability of resampling.
             max_noise_intensity: The maximum intensity of the noise.
@@ -28,6 +31,7 @@ class DatasetWrapper:
             max_resample: The maximum resample rate.
             min_fragment_length: The minimum fragment length.
             max_fragment_length: The maximum fragment length.
+            noise_dir: directory where stored noise .wav files
         """
 
         if isinstance(data, list):
@@ -45,7 +49,8 @@ class DatasetWrapper:
 
         self.sampling_rate = sampling_rate
         self.name = name
-        self.p_noise = p_noise
+        self.p_random_noise = p_random_noise
+        self.p_real_noise = p_real_noise
         self.p_smooth = p_smooth
         self.p_resample = p_resample
         self.noise_intensity = max_noise_intensity
@@ -56,10 +61,17 @@ class DatasetWrapper:
         self.min_fragment_length = min_fragment_length
         self.max_fragment_length = max_fragment_length
 
-        if use_nc:
-            self.tg = TorchGate(sr=sampling_rate, nonstationary=False)
-        else:
-            self.tg = None
+        self.noises = []
+
+        if noise_dir:
+            for file in os.listdir(noise_dir):
+                try:
+                    noise_wf, noise_sr = torchaudio.load(f"{noise_dir}/{file}")
+                except:  # skip if can't load file
+                    continue
+
+                noise_wf = FF.resample(noise_wf, noise_sr, sampling_rate)
+                self.noises.append(noise_wf[0])
 
     def get_kernel(self, smoothness_factor):
         """Count the binomial coefficients"""
@@ -80,7 +92,7 @@ class DatasetWrapper:
     def augmentate(self, item):
         array = item["array"]
         sampling_rate = item["sampling_rate"]
-        if random.random() < self.p_noise:
+        if random.random() < self.p_random_noise:
             resulting_noise_intensity = (self.noise_intensity * array.abs().max() * random.random())
             noise = torch.randn_like(array) * resulting_noise_intensity
             array = array + noise
@@ -91,21 +103,34 @@ class DatasetWrapper:
             new_sampling_rate = random.choice(self.random_sampling_rates)
             array = FF.resample(array, sampling_rate, new_sampling_rate)
             sampling_rate = new_sampling_rate
+        if random.random() < self.p_real_noise:
+            total_length = sum(map(lambda x: x.shape[0], self.noises))
+
+            val = random.randint(0, total_length - 1)
+
+            prev_len = 0
+            for i in range(len(self.noises)):  # choose one of noise files according to their length
+                if prev_len <= val < prev_len + self.noises[i].shape[0]:
+                    start = random.randint(0, self.noises[i].shape[0] - item["array"].shape[-1])
+                    noise = self.noises[i][start:start+item["array"].shape[-1]]
+
+                    noise = torch.stack([noise] * item["array"].shape[0])  # from 1D to 2D
+                    item["array"] += noise
+
+                    break
+
+                prev_len += self.noises[i].shape[0]
+
         item["array"] = FF.resample(array, sampling_rate, self.sampling_rate)[:1]
         item["sampling_rate"] = self.sampling_rate
 
         if self.min_fragment_length and self.max_fragment_length:  # get random segment of wav
-            fragment_length = int(self.sampling_rate * (self.min_fragment_length + random.random() * (self.max_fragment_length - self.min_fragment_length)))
+            fragment_length = int(self.sampling_rate * (self.min_fragment_length + random.random() * (
+                        self.max_fragment_length - self.min_fragment_length)))
             fragment_length = min(fragment_length, item["array"].shape[1])
             start = random.randint(0, item["array"].shape[1] - fragment_length)
 
-            item["array"] = item["array"][:, start:start+fragment_length]
-
-        if self.tg:
-            try:
-                item["array"] = self.tg(item["array"])
-            except:  # when errors on noise cancellation with small files
-                pass
+            item["array"] = item["array"][:, start:start + fragment_length]
 
         return item
 

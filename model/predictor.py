@@ -1,6 +1,6 @@
 import torch
 import torchaudio
-from model.model import VoicePredictor
+from model.voice_predictor import VoicePredictor
 from model.trainer import extract_features
 
 
