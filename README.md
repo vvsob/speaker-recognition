@@ -29,5 +29,6 @@ streamlit run streamlit.py
 - [Авдеев Дмитрий](https://github.com/SmiloVirus)
 - [Черта Вячеслав](https://github.com/SlavaKemDev)
 - [Соболев Олег](https://github.com/vvsob)
+
 Ментор:
 - [Даниил Павленко](https://github.com/netkex)
