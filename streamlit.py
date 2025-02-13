@@ -110,7 +110,7 @@ class AudioProcessor:
         y = array[0, :sampling_rate * length_seconds]
 
         fig.add_trace(
-            go.Scatter(x=x, y=y, name="", ),
+            go.Scatter(x=x, y=y, name="", marker=dict(color='red')),
             row=1, col=1
         )
         fig.update_yaxes(range=[-1, 1], title_text="Amplitude", row=1, col=1)
@@ -126,7 +126,7 @@ class AudioProcessor:
             x=time,
             y=freq,
             z=spectrogram_dB.tolist(),
-            colorscale='Viridis',
+            colorscale='Reds',
             showscale=False
         ), row=2, col=1)
         fig.update_yaxes(title_text="Frequency, Hz", row=2, col=1)
@@ -143,7 +143,7 @@ class AudioProcessor:
             x=time,
             y=freq,
             z=mel_spectrogram_dB.tolist(),
-            colorscale='Electric',
+            colorscale='OrRd',
             showscale=True,
             colorbar_title="dB"
         ), row=3, col=1).update_coloraxes(showscale=False)
