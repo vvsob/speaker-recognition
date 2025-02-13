@@ -25,6 +25,9 @@ llvmlite = ">=0.40.0"
 librosa = "^0.10.2.post1"
 matplotlib = "^3.10.0"
 noisereduce = "^3.0.3"
+transformers = "^4.48.3"
+librosa = "^0.10.2.post1"
+plotly = "^6.0.0"
 
 
 [build-system]

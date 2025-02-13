@@ -19,4 +19,4 @@ class Classifier:
 
     def get_id_probabilities(self, array, sampling_rate, window_length=5):
         probabilities = self.get_probabilities(array, sampling_rate, window_length)
-        return str(int(torch.abs(probabilities).argmax())), probabilities
+        return int(torch.abs(probabilities).argmax()), probabilities
