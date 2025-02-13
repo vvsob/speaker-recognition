@@ -14,8 +14,6 @@ torch.classes.__path__ = []
 
 import streamlit as st
 from model.classifier import Classifier
-from noisereduce.torchgate import TorchGate
-
 
 def load_audio_from_wave_object(wave_obj):
     """Loads audio data from a wave.Wave_read object into a Torch tensor.
@@ -80,13 +78,10 @@ class AudioProcessor:
                        5: "Другое"}
         self.array = None
         self.sampling_rate = None
-        self.tg = None
 
     def get_user(self, audio_data):
         self.array, self.sampling_rate = load_audio_from_wave_object(wave.open(BytesIO(audio_data)))
-        if self.tg is None:
-            self.tg = TorchGate(sr=self.sampling_rate, nonstationary=False)
-        id, probabilities = self.classifier.get_id_probabilities(self.tg(self.array), self.sampling_rate)
+        id, probabilities = self.classifier.get_id_probabilities(self.array, self.sampling_rate)
         return id, self.id_map.get(id, None), probabilities
 
     def get_fig(self, audio_data):

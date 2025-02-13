@@ -3,7 +3,6 @@ import random
 import torch
 import torch.nn.functional as F
 import torchaudio.functional as FF
-from noisereduce.torchgate import TorchGate
 
 
 class DatasetWrapper:
@@ -11,10 +10,10 @@ class DatasetWrapper:
                  max_noise_intensity=0.02, min_smoothness_factor=20,
                  max_smoothness_factor=100, smoothness_factors_step=10, min_resample=4000, max_resample=8000, min_fragment_length=None, max_fragment_length=None, use_nc=False):
         """
-        Initializes the DatasetWrapper.  Assumes input is always a Dataset.
+        Initializes the DatasetWrapper.  Assumes input is always a Dataset or a list of dictionaries.
 
         Args:
-            data: The Hugging Face Dataset object.
+            data: The Hugging Face Dataset object or a list of dictionaries.
             sampling_rate: The target sampling rate of the audio.
             name: The name of the dataset.
             p_noise: The probability of noise.
@@ -28,6 +27,7 @@ class DatasetWrapper:
             max_resample: The maximum resample rate.
             min_fragment_length: The minimum fragment length.
             max_fragment_length: The maximum fragment length.
+            use_nc: Whether to use Noise Cancelling.
         """
 
         if isinstance(data, list):
@@ -56,10 +56,6 @@ class DatasetWrapper:
         self.min_fragment_length = min_fragment_length
         self.max_fragment_length = max_fragment_length
 
-        if use_nc:
-            self.tg = TorchGate(sr=sampling_rate, nonstationary=False)
-        else:
-            self.tg = None
 
     def get_kernel(self, smoothness_factor):
         """Count the binomial coefficients"""
@@ -100,12 +96,6 @@ class DatasetWrapper:
             start = random.randint(0, item["array"].shape[1] - fragment_length)
 
             item["array"] = item["array"][:, start:start+fragment_length]
-
-        if self.tg:
-            try:
-                item["array"] = self.tg(item["array"])
-            except:  # when errors on noise cancellation with small files
-                pass
 
         return item
 
